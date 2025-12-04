@@ -5,13 +5,15 @@
  * Prepared by: Muhammad Umer Farooq (Leader) & Abdur Rehman
  *
  * ADJUSTMENTS:
- * - Removed clearScreen logic completely (No spaces/scrolling).
- * - Runs in RAM only (No file handling).
- * - No restricted libraries.
+ * - ADDED: File Handling (patients.txt) to save/load data.
+ * - KEPT REMOVED: No "buffer spaces" (screen clearing gaps).
+ * - Fixed input buffering for smooth user experience.
  */
 
 #include <iostream>
 #include <string>
+#include <fstream> // Added for File Handling
+#include <limits>  // Required for buffer clearing
 
 using namespace std;
 
@@ -47,19 +49,17 @@ int idCounter = 100;
 // HELPER FUNCTIONS (UI)
 // ==========================================
 
-// Function is now empty to prevent 50 lines of spaces
 void clearScreen() {
-    // Intentionally empty to stop scrolling/spaces
+    // Intentionally empty to prevent "buffer spaces" (vertical gaps)
 }
 
-// Simplified pause function
 void waitForKey() {
     cout << "\nPress Enter to continue...";
-    cin.ignore(1000, '\n'); 
+    // Robust buffer clearing check
+    if (cin.peek() == '\n') cin.ignore();
     cin.get(); 
 }
 
-// ANSI Colors
 void setColor(int color) {
     if (color == 11) cout << "\033[96m"; 
     else if (color == 12) cout << "\033[91m";
@@ -68,8 +68,6 @@ void setColor(int color) {
 }
 
 void printHeader() {
-    clearScreen(); // Does nothing now
-    setColor(11); // Cyan
     cout << "\n==============================================================" << endl;
     cout << "           HOSPITAL PATIENT MANAGEMENT SYSTEM                 " << endl;
     cout << "==============================================================" << endl;
@@ -82,25 +80,108 @@ void loadingBar() {
 }
 
 // ==========================================
+// FILE HANDLING (NEWLY ADDED)
+// ==========================================
+
+void saveToFile() {
+    ofstream outFile("patients.txt");
+    if (!outFile) {
+        cout << "Error accessing file system!" << endl;
+        return;
+    }
+
+    Node* temp = head;
+    while (temp != NULL) {
+        outFile << temp->data.id << endl;
+        outFile << temp->data.name << endl;
+        outFile << temp->data.age << endl;
+        outFile << temp->data.contact << endl;
+        outFile << temp->data.department << endl;
+        outFile << temp->data.diagnosis << endl;
+        outFile << temp->data.admissionDate << endl;
+        temp = temp->next;
+    }
+    outFile.close();
+}
+
+void loadFromFile() {
+    ifstream inFile("patients.txt");
+    if (!inFile) return; // File might not exist on first run, which is fine
+
+    Patient p;
+    while (inFile >> p.id) {
+        inFile.ignore(); // consume newline
+        getline(inFile, p.name);
+        inFile >> p.age;
+        inFile.ignore();
+        getline(inFile, p.contact);
+        getline(inFile, p.department);
+        getline(inFile, p.diagnosis);
+        getline(inFile, p.admissionDate);
+
+        // Add to Linked List
+        Node* newNode = new Node;
+        newNode->data = p;
+        newNode->next = NULL;
+
+        if (head == NULL) {
+            head = newNode;
+        } else {
+            Node* temp = head;
+            while (temp->next != NULL) {
+                temp = temp->next;
+            }
+            temp->next = newNode;
+        }
+
+        // Update ID counter so new patients get unique IDs
+        if (p.id >= idCounter) {
+            idCounter = p.id + 1;
+        }
+    }
+    inFile.close();
+}
+
+// ==========================================
 // AUTHENTICATION
 // ==========================================
 
-bool login() {
-    printHeader();
+void login() {
     string user, pass;
-    cout << "\n\t[ SECURE LOGIN REQUIRED ]" << endl;
-    cout << "\n\tUsername: "; cin >> user;
-    cout << "\tPassword: "; cin >> pass;
+    bool isAuthenticated = false;
 
-    if (user == "admin" && pass == "admin123") {
-        cout << "\n\tAccess Granted!" << endl;
-        return true;
-    } else {
-        setColor(12); // Red
-        cout << "\n\tAccess Denied! Invalid Credentials." << endl;
-        setColor(7);
-        waitForKey(); 
-        return false;
+    while (!isAuthenticated) {
+        printHeader();
+        cout << "\n\t[ SECURE LOGIN REQUIRED ]" << endl;
+        
+        if (cin.peek() == '\n') cin.ignore();
+
+        cout << "\n\tUsername: "; 
+        if (!(cin >> user)) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+
+        cout << "\tPassword: "; 
+        if (!(cin >> pass)) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+
+        if (user == "admin" && pass == "admin123") {
+            cout << "\n\tAccess Granted!" << endl;
+            isAuthenticated = true;
+            cout << "\nPress Enter to access Main Menu...";
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+            cin.get();
+        } else {
+            setColor(12); // Red
+            cout << "\n\tAccess Denied! Invalid Credentials." << endl;
+            setColor(7);
+            cout << "\n\tTry Again? (Press Enter)";
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cin.get();
+        }
     }
 }
 
@@ -115,12 +196,14 @@ void addPatient() {
     Node* newNode = new Node;
     newNode->data.id = idCounter++;
     
+    // Clear buffer if needed
+    if (cin.peek() == '\n') cin.ignore();
+
     cout << "Enter Name: "; 
-    cin.ignore(); 
     getline(cin, newNode->data.name);
     
     cout << "Enter Age: "; cin >> newNode->data.age;
-    cin.ignore(); 
+    cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
     
     cout << "Enter Contact: "; getline(cin, newNode->data.contact);
     cout << "Assign Department: "; getline(cin, newNode->data.department);
@@ -140,9 +223,11 @@ void addPatient() {
         temp->next = newNode;
     }
 
+    saveToFile(); // SAVE DATA
     setColor(10); // Green
     cout << "\nPatient Added Successfully! Assigned ID: " << newNode->data.id << endl;
     setColor(7);
+    
     waitForKey();
 }
 
@@ -213,9 +298,11 @@ void doctorDiagnosis() {
             found = true;
             cout << "\nCurrent Diagnosis: " << temp->data.diagnosis << endl;
             cout << "Enter New Clinical Diagnosis: ";
-            cin.ignore();
+            
+            if (cin.peek() == '\n') cin.ignore();
             getline(cin, temp->data.diagnosis);
             
+            saveToFile(); // SAVE DATA
             setColor(10);
             cout << "\nDiagnosis Updated Successfully." << endl;
             setColor(7);
@@ -286,6 +373,7 @@ void dischargePatient() {
         }
         delete temp;
 
+        saveToFile(); // SAVE DATA (Update file after removal)
         setColor(10);
         cout << "\nPatient Discharged and moved to Recycle Bin." << endl;
         setColor(7);
@@ -307,6 +395,7 @@ void undoDischarge() {
         newNode->next = head; 
         head = newNode;
 
+        saveToFile(); // SAVE DATA (Update file after restoration)
         setColor(10);
         cout << "Restored Patient: " << p.name << " (ID: " << p.id << ")" << endl;
         setColor(7);
@@ -345,14 +434,14 @@ void mainMenu() {
         cout << " 5. Display All Active Patients" << endl;
         cout << " 6. View Recycle Bin" << endl;
         cout << " 7. Undo Last Discharge" << endl;
-        cout << " 8. Exit System" << endl;
+        cout << " 8. Save & Exit" << endl; // Updated text
         cout << "==============================================================" << endl;
         cout << " Select Option: ";
 
         int choice;
         if (!(cin >> choice)) {
             cin.clear(); 
-            cin.ignore(1000, '\n');
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
             choice = 0;
         }
 
@@ -365,10 +454,11 @@ void mainMenu() {
             case 6: viewRecycleBin(); break;
             case 7: undoDischarge(); break;
             case 8: 
-                cout << "\nExiting System..." << endl;
+                saveToFile(); // Explicit save on exit
+                cout << "\nExiting System... Data Saved." << endl;
                 running = false; 
                 break;
-            default: cout << "Invalid Option!" << endl; // No delay
+            default: cout << "Invalid Option!" << endl;
         }
     }
 }
@@ -378,11 +468,14 @@ void mainMenu() {
 // ==========================================
 
 int main() {
-    loadingBar();
+    // Load data from file at start
+    loadFromFile();
 
-    if (login()) {
-        mainMenu();
-    }
+    loadingBar();
+    
+    login(); 
+
+    mainMenu();
 
     return 0;
 }
