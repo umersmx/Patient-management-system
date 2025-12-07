@@ -280,7 +280,7 @@ private:
 
     void printHeader() {
         cout << "\n==============================================" << endl;
-        cout << "   HOSPITAL PATIENT MANAGEMENT SYSTEM (OOP)   " << endl;
+        cout << "   HOSPITAL PATIENT MANAGEMENT SYSTEM         " << endl;
         cout << "==============================================" << endl;
     }
 
