@@ -14,7 +14,7 @@
 #include <iostream>  // Used for input (cin) and output (cout)
 #include <string>    // Used to handle text (names, diagnosis)
 #include <fstream>   // Used for File Handling (reading/writing .txt files)
-#include <limits>    // Used to clear the input buffer (fix skipping issues)
+// REMOVED: #include <limits> - We are using simple numbers now
 
 using namespace std;
 
@@ -195,14 +195,14 @@ void login() {
             cout << "\n\tAccess Granted!" << endl;
             isAuthenticated = true; // Stop the loop
             cout << "\nPress Enter to access Main Menu...";
-            cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+            cin.ignore(1000, '\n'); // Replaced limits logic with 1000
             cin.get();
         } else {
             setColor(12); // Red color
             cout << "\n\tAccess Denied! Invalid Credentials." << endl;
             setColor(7); // Reset color
             cout << "\n\tTry Again? (Press Enter)";
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cin.ignore(1000, '\n'); // Replaced limits logic with 1000
             cin.get();
         }
     }
@@ -228,7 +228,7 @@ void addPatient() {
     getline(cin, newNode->data.name);
     
     cout << "Enter Age: "; cin >> newNode->data.age;
-    cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Clear buffer after number
+    cin.ignore(1000, '\n'); // Clear buffer after number (1000 is safer than simple ignore)
     
     cout << "Enter Contact: "; getline(cin, newNode->data.contact);
     cout << "Assign Department: "; getline(cin, newNode->data.department);
@@ -490,7 +490,7 @@ void mainMenu() {
         // Check if user entered a number or garbage text
         if (!(cin >> choice)) {
             cin.clear(); // Clear error flag
-            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Clear bad input
+            cin.ignore(1000, '\n'); // Clear bad input (Replaced limits with 1000)
             choice = 0;
         }
 
